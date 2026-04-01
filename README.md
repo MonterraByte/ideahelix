@@ -20,6 +20,45 @@ this often forces us to leave an environment like Helix, which feels more like a
 hand than just an editor. The goal of this project is to bridge the gap between the
 tooling provided by JetBrains and the editing model of Helix.
 
+## Development
+
+This plugin is written in [Clojure](https://clojure.org), and developing it in IntelliJ
+IDEA requires the [Cursive](https://cursive-ide.com/) plugin. One of Clojure’s greatest
+strengths is its REPL, which allows plugin development without constant recompilation or
+IDE restarts. By default, the REPL uses port 7888, which is hardcoded but can be changed
+if needed.
+
+### Configurations
+
+To get started, you need two Run configurations:
+
+**Gradle Build**
+
+In Run/Debug Configurations, create a new Gradle configuration with the `runIde` task.
+
+**Clojure REPL**
+
+In Run/Debug Configurations, create a new `Clojure REPL/Remote` configuration with these settings:
+
+- Connection type: `nREPL`
+- Context module: `ideahelix.main`
+- Host: `localhost`
+- Port: `7888` (or change it in clojure/core.clj if desired)
+
+This setup connects to a running IntelliJ IDEA instance with the plugin installed,
+enabling live reloading of functions directly from the host IDE. Check the Cursive manual
+for REPL hotkeys and workflow guidance.
+
+### Build plugin
+
+```
+./gradlew buildPlugin
+```
+
+This will emit a zip under `build/distributions/ideahelix-1.0-SNAPSHOT.zip` that can be installed manually.
+
+In case of version mismatch error try JDK 21.
+
 ## Goals
 - Helix users and their muscle memory should feel at home with no need to re-learn
   everything.
