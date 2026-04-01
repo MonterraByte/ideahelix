@@ -36,6 +36,8 @@ dependencies {
 
     implementation("org.clojure:clojure:1.12.0")
 
+    implementation("io.github.tonsky:toml-clj:0.1.0")
+
     implementation("nrepl:nrepl:1.3.1")
 
     implementation("cider:cider-nrepl:0.50.0")

@@ -25,8 +25,10 @@ tooling provided by JetBrains and the editing model of Helix.
 This plugin is written in [Clojure](https://clojure.org), and developing it in IntelliJ
 IDEA requires the [Cursive](https://cursive-ide.com/) plugin. One of Clojure’s greatest
 strengths is its REPL, which allows plugin development without constant recompilation or
-IDE restarts. By default, the REPL uses port 7888, which is hardcoded but can be changed
-if needed.
+IDE restarts. `nREPL` is started only when the IdeaHelix config file contains a
+development port configuration. The config path follows IdeaVim conventions:
+`~/.ideahelix.toml` on macOS/Linux and `_ideahelix.toml` in the user home directory on
+Windows.
 
 ### Configurations
 
@@ -38,12 +40,24 @@ In Run/Debug Configurations, create a new Gradle configuration with the `runIde`
 
 **Clojure REPL**
 
+Create the config file at one of these paths:
+
+- macOS/Linux: `~/.ideahelix.toml`
+- Windows: `%HOMEPATH%\\_ideahelix.toml`
+
+With:
+
+```toml
+[development]
+nrepl_port = 7888
+```
+
 In Run/Debug Configurations, create a new `Clojure REPL/Remote` configuration with these settings:
 
 - Connection type: `nREPL`
 - Context module: `ideahelix.main`
 - Host: `localhost`
-- Port: `7888` (or change it in clojure/core.clj if desired)
+- Port: the value from `nrepl_port`
 
 This setup connects to a running IntelliJ IDEA instance with the plugin installed,
 enabling live reloading of functions directly from the host IDE. Check the Cursive manual

@@ -5,10 +5,12 @@
 (ns fominok.ideahelix.core
   (:require
     [cider.nrepl :refer (cider-nrepl-handler)]
+    [clojure.java.io :as io]
     [fominok.ideahelix.editor :refer [handle-editor-event state-atom quit-insert-mode]]
     [fominok.ideahelix.editor.selection :refer :all]
     [fominok.ideahelix.editor.ui :as ui]
-    [nrepl.server :refer [start-server]])
+    [nrepl.server :refer [start-server]]
+    [toml-clj.core :as toml])
   (:import
     (com.intellij.openapi.editor
       Editor)
@@ -19,6 +21,29 @@
 
 
 (set! *warn-on-reflection* true)
+
+
+(defn- config-file
+  []
+  (let [home (System/getProperty "user.home")
+        os-name (System/getProperty "os.name" "")]
+    (io/file home
+             (if (.startsWith os-name "Windows")
+               "_ideahelix.toml"
+               ".ideahelix.toml"))))
+
+
+(defn- read-config
+  []
+  (let [config-file (config-file)]
+    (with-open [reader (io/reader config-file)]
+      (toml/read reader))))
+
+
+(defn- configured-nrepl-port
+  []
+  (some-> (read-config)
+          (get-in ["development" "nrepl_port"])))
 
 
 (defn push-event
@@ -54,4 +79,6 @@
                                  (ihx-apply-selection! document))))))))
 
 
-(defonce -server (start-server :port 7888 :handler cider-nrepl-handler))
+(defonce -server
+  (when-some [port (configured-nrepl-port)]
+    (start-server :port port :handler cider-nrepl-handler)))
