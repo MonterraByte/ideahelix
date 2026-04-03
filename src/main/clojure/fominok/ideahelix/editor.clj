@@ -4,12 +4,11 @@
 
 (ns fominok.ideahelix.editor
   (:require
-    [fominok.ideahelix.editor.action :refer [actions]]
+    [fominok.ideahelix.editor.action :refer [actions redo-available? undo-available?]]
     [fominok.ideahelix.editor.jumplist :refer :all]
     [fominok.ideahelix.editor.modification :refer :all]
     [fominok.ideahelix.editor.registers :refer :all]
     [fominok.ideahelix.editor.selection :refer :all]
-    [fominok.ideahelix.editor.ui :as ui]
     [fominok.ideahelix.editor.util :refer [get-editor-height]]
     [fominok.ideahelix.keymap :refer [defkeymap]]
     [fominok.ideahelix.search :refer :all])
@@ -58,7 +57,7 @@
    state
    editor
    & {:keys [dump-selections insertion-kind]
-      :or {dump-selections true insertion-kind :prepend}}]
+      :or   {dump-selections true insertion-kind :prepend}}]
   (let [pre-selections (when dump-selections (dump-drop-selections! editor (.getDocument editor)))]
     (-> state
         (assoc-in [:per-editor editor :mark-action] (start-undo project editor))
@@ -98,21 +97,23 @@
    (\t
      "Find till char"
      [state] (assoc state :mode :find-char
-                    :find-char-include false
-                    :previous-mode (:mode state)))
+                          :find-char-include false
+                          :previous-mode (:mode state)))
    (\f
      "Find including char"
      [state] (assoc state :mode :find-char
-                    :find-char-include true
-                    :previous-mode (:mode state)))
+                          :find-char-include true
+                          :previous-mode (:mode state)))
    (\u
      "Undo"
-     [editor] (actions editor IdeActions/ACTION_UNDO)
+     [editor] (when (undo-available? editor)
+                (actions editor IdeActions/ACTION_UNDO))
      [document caret] (-> (ihx-selection document caret)
                           (ihx-apply-selection! document)))
    ((:shift \U)
     "Redo"
-    [editor] (actions editor IdeActions/ACTION_REDO)
+    [editor] (when (redo-available? editor)
+               (actions editor IdeActions/ACTION_REDO))
     [document caret] (-> (ihx-selection document caret)
                          (ihx-apply-selection! document)))
    (\y
@@ -257,7 +258,7 @@
            (ihx-move-relative! :lines n-lines)
            (ihx-shrink-selection)
            (ihx-apply-selection! document))))
-    ((:or (:ctrl \d) (:ctrl \u0015))
+    ((:or (:ctrl \u) (:ctrl \u0015))
      "Move up half page extending" :scroll
      [editor document caret]
      (let [n-lines (quot (get-editor-height editor) 2)]
@@ -380,7 +381,7 @@
        (-> (ihx-selection document caret)
            (ihx-move-relative! :lines n-lines)
            (ihx-apply-selection! document))))
-    ((:or (:ctrl \d) (:ctrl \u0015))
+    ((:or (:ctrl \u) (:ctrl \u0015))
      "Move up half page extending" :scroll
      [editor document caret]
      (let [n-lines (quot (get-editor-height editor) 2)]
@@ -491,13 +492,13 @@
       (actions editor IdeActions/ACTION_GOTO_DECLARATION)
       [state] (assoc state :mode :normal))
     (\n
-      "Next tab"
+      "Next tab" :jumplist-add
       [editor]
       (actions editor IdeActions/ACTION_NEXT_TAB)
       [state]
       (assoc state :mode :normal))
     (\p
-      "Previous tab"
+      "Previous tab" :jumplist-add
       [editor]
       (actions editor IdeActions/ACTION_PREVIOUS_TAB)
       [state]
@@ -571,7 +572,7 @@
       "File finder"
       [state project editor]
       (do
-        (search-file-name project editor)
+        (search-file-name project state-atom editor)
         (assoc state :mode :normal)))
     (\r
       "Rename symbol"
@@ -766,8 +767,7 @@
       (map? result) (do
                       (.consume event)
                       (let [new-state (merge project-state result)]
-                        (swap! state-atom assoc project new-state)
-                        (ui/update-mode-panel! project new-state))
+                        (swap! state-atom assoc project new-state))
                       true)
       :default (do
                  (.consume event)
