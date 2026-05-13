@@ -568,6 +568,21 @@
     (_ [state] (assoc state :mode :select)))
 
   (:space
+    (\y
+      "Yank selections to clipboard"
+      [editor document]
+      (copy-to-clipboard editor document)
+      [state] (assoc state :mode :normal))
+    (\p
+      "Paste clipboard after selections" :undoable :write
+      [editor document]
+      (paste-clipboard editor document)
+      [state] (assoc state :mode :normal))
+    ((:shift \P)
+      "Paste clipboard before selections" :undoable :write
+      [editor document]
+      (paste-clipboard editor document :before true)
+      [state] (assoc state :mode :normal))
     (\f
       "File finder"
       [state project editor]
@@ -588,7 +603,8 @@
             action-event (AnActionEvent/createFromDataContext
                            ActionPlaces/KEYBOARD_SHORTCUT nil data-context)]
         (.show manager "TextSearchContributor" nil action-event)
-        (assoc state :mode :normal))))
+        (assoc state :mode :normal)))
+    (_ [state] (assoc state :mode :normal)))
 
   (:view
     ((:or \z \c)
@@ -650,7 +666,10 @@
       "Select inside"
       [document caret char]
       (-> (ihx-selection document caret)
-          (ihx-select-inside document char)
+          ((fn [selection]
+             (if (= char \m)
+               (ihx-select-inside-matching selection document)
+               (ihx-select-inside selection document char))))
           (ihx-apply-selection! document))
       [state] (assoc state :mode :normal)))
 
@@ -659,7 +678,10 @@
       "Select inside"
       [document caret char]
       (-> (ihx-selection document caret)
-          (ihx-select-inside document char)
+          ((fn [selection]
+             (if (= char \m)
+               (ihx-select-inside-matching selection document)
+               (ihx-select-inside selection document char))))
           (ihx-apply-selection! document))
       [state] (assoc state :mode :select)))
 
@@ -668,7 +690,10 @@
       "Select around"
       [document caret char]
       (-> (ihx-selection document caret)
-          (ihx-select-around document char)
+          ((fn [selection]
+             (if (= char \m)
+               (ihx-select-around-matching selection document)
+               (ihx-select-around selection document char))))
           (ihx-apply-selection! document))
       [state] (assoc state :mode :normal)))
 
@@ -677,7 +702,10 @@
       "Select around"
       [document caret char]
       (-> (ihx-selection document caret)
-          (ihx-select-around document char)
+          ((fn [selection]
+             (if (= char \m)
+               (ihx-select-around-matching selection document)
+               (ihx-select-around selection document char))))
           (ihx-apply-selection! document))))
 
   ((:or :match :select-match)

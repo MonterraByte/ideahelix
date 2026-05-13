@@ -503,6 +503,17 @@
    \> {:match \< :direction :close}})
 
 
+(def bracket-pairs
+  (->> char-match
+       (keep (fn [[char {:keys [match direction]}]]
+               (when (= direction :open)
+                 [char match])))
+       vec))
+
+
+(declare find-bracket-pair)
+
+
 (defn next-match
   [text offset opener target]
   (loop [to-find 1 text (.subSequence text offset (.length text)) acc-offset offset]
@@ -541,28 +552,53 @@
         text (.getCharsSequence document)
         curr-char (.charAt (.getCharsSequence document) offset)]
     (if (and (not= open-char curr-char) (not= close-char curr-char))
-      {:left (previous-match text offset close-char open-char)
-       :right (next-match text offset open-char close-char)}
+      (let [left (previous-match text offset close-char open-char)
+            right (next-match text offset open-char close-char)]
+        (when (and (some? left) (some? right))
+          {:left left :right right}))
       (cond
         (= open-char close-char) nil
-        (= open-char curr-char) {:left offset
-                                 :right (next-match text (inc offset) open-char close-char)}
-        (= close-char curr-char) {:left (previous-match text (dec offset) close-char open-char)
-                                  :right offset}))))
+        (= open-char curr-char) (when-let [right (next-match text (inc offset) open-char close-char)]
+                                  {:left offset :right right})
+        (= close-char curr-char) (when-let [left (previous-match text (dec offset) close-char open-char)]
+                                   {:left left :right offset})))))
 
 
 (defn ihx-select-inside
   [selection document char]
-  (let [matches (find-matches selection document char)]
-    (when (not (nil? matches))
-      (assoc selection :offset (inc (:left matches)) :anchor (dec (:right matches))))))
+  (when-let [{:keys [left right]} (find-matches selection document char)]
+    (assoc selection :offset (inc left) :anchor (dec right))))
+
+
+(defn- find-nearest-bracket-pair
+  [{:keys [offset]} document]
+  (let [text (.getCharsSequence document)]
+    (->> bracket-pairs
+         (keep (fn [[open-char close-char]]
+                 (when-let [[left right] (find-bracket-pair text offset open-char close-char)]
+                   {:left left
+                    :right right
+                    :span (- right left)})))
+         (sort-by (juxt :span :left))
+         first)))
+
+
+(defn ihx-select-inside-matching
+  [selection document]
+  (when-let [{:keys [left right]} (find-nearest-bracket-pair selection document)]
+    (assoc selection :offset (inc left) :anchor (dec right))))
 
 
 (defn ihx-select-around
   [selection document char]
-  (let [matches (find-matches selection document char)]
-    (when (not (nil? matches))
-      (assoc selection :offset (:left matches) :anchor (:right matches)))))
+  (when-let [{:keys [left right]} (find-matches selection document char)]
+    (assoc selection :offset left :anchor right)))
+
+
+(defn ihx-select-around-matching
+  [selection document]
+  (when-let [{:keys [left right]} (find-nearest-bracket-pair selection document)]
+    (assoc selection :offset left :anchor right)))
 
 
 (defn ihx-surround-add
