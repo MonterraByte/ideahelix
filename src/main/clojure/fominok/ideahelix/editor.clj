@@ -577,6 +577,11 @@
     (_ [state] (assoc state :mode :select)))
 
   (:space
+    (\a
+      "Perform code action"
+      [editor]
+      (actions editor IdeActions/ACTION_SHOW_INTENTION_ACTIONS)
+      [state] (assoc state :mode :normal))
     (\y
       "Yank selections to clipboard"
       [editor document]
