@@ -27,6 +27,8 @@
       StartMarkAction$AlreadyStartedException)
     (com.intellij.openapi.editor
       ScrollType)
+    (com.intellij.openapi.editor.ex
+      EditorSettingsExternalizable)
     (com.intellij.openapi.editor.impl
       EditorImpl)
     (java.awt.event
@@ -46,6 +48,7 @@
 
 (defn quit-insert-mode
   [project state document]
+  (.setBlockCursor (EditorSettingsExternalizable/getInstance) true)
   (doseq [[editor {:keys [mark-action pre-selections]}] (:per-editor state)]
     (restore-selections pre-selections (:insertion-kind state) editor document)
     (finish-undo project editor mark-action))
@@ -58,6 +61,7 @@
    editor
    & {:keys [dump-selections insertion-kind]
       :or   {dump-selections true insertion-kind :prepend}}]
+  (.setBlockCursor (EditorSettingsExternalizable/getInstance) false)
   (let [pre-selections (when dump-selections (dump-drop-selections! editor (.getDocument editor)))]
     (-> state
         (assoc-in [:per-editor editor :mark-action] (start-undo project editor))
