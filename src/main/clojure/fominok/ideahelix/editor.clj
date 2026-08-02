@@ -495,6 +495,11 @@
       [editor]
       (actions editor IdeActions/ACTION_GOTO_DECLARATION)
       [state] (assoc state :mode :normal))
+    (\r
+      "Goto references" :jumplist-add
+      [editor]
+      (actions editor IdeActions/ACTION_FIND_USAGES)
+      [state] (assoc state :mode :normal))
     (\n
       "Next tab" :jumplist-add
       [editor]
